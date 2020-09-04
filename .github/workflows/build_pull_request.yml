@@ -21,7 +21,7 @@ jobs:
           extended: true
 
       - name: Setup Academic
-        run: npm install gcushen/hugo-academic
+        run: npm install
         working-directory: ./
 
       - name: Build
