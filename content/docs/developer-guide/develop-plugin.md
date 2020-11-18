@@ -9,7 +9,7 @@ weight: 330
 ## Overview
 In order to provide an easy way to port a Keyple applications from a device with a specific card reader to another, a plugin system
 as been developed. When a developer wants to include Keyple features within his project, he has to initialize the SmartCardService by providing a
-plugin Factory available with in the plugin components. The plugin to use depends on the target device and running environment.
+plugin Factory available with in the plugin library. The plugin to use depends on the targeted device and running environment.
 
 For example, for an android device with native NFC we'll use KeypleAndroidNfcPlugin.
 
@@ -26,14 +26,18 @@ Keyple is already provided with various plug-ins ready to use. For example Andro
 But users of the Keyple API may need to use it on new hardware not covered with existing plugins. In this case, a new 
 one must be developed. 
 
-The purpose of this guide is to accompany developers in this process.   
+The purpose of this guide is to support developers in this process.
 
 ## Class diagram of plugin package
+
+For the record, this is a wide view of classes implied in the plugin system. It is designed to natively handle as much 
+use cas as possible while being easy to use. It results of several internal classes, however, plugin's developers will 
+only have to use a few part of this elements.
 
 {{< figure library="true" src="plugin-development/class/Plugin_Class_Full.png" title="" >}} 
 
 ## Steps
-Plugin development relies on 3 main steps, each one consinsiting of implementing a set of abstract classes and methods of
+Plugi'sn development relies on 3 main steps, each one consists in implementing a few set of abstract classes and interfaces of
 plugin package from Keyple Core API:
 1. Import Keyple dependency
 1. Implement a Keyple Reader
@@ -50,14 +54,17 @@ implementation "org.eclipse.keyple:keyple-java-core:$keyple_version"
 
 ## Implement Keyple Reader
 The first step of a Keyple plugin development is the implementation of Keyple Reader Interface (org.eclipse.keyple.core.Reader). 
-This implementation with use hardware's native smartcard sdk to map interface used by Keyple API. 
+This implementation should use device's native smartcard reader library (or sdk package) to map interfaces used by Keyple API. 
 
-This implementation of a local reader must be done through the extension of two abstract class provided within the sdk whose the choice depends
+This implementation of a local reader must be done through the extension of one of three abstract classes provided within the Keyple API. The choice depends
 on expected behaviour of the reader:
 * **AbstractLocalReader**: Basic abstract class to use for local reader implementation.
-* **AbstractObservableLocalReader**: This abstract class is used to manage the matter of observing card events in the case of a local reader 
+* **AbstractObservableLocalReader**: extends AbstractLocalReader and is used to manage the matter of observing card events in the case of a local reader 
 (ie: card insertion, card removal..).
+* **AbstractObservableLocalAutonomousReader**: extends AbstractObservableLocalReader and is used to allow the reader implementation to 
+call back the core when card insertion and removal events occur.
 
+//TODO: Update
 {{< figure library="true" src="plugin-development/class/readers.png" title="Abstract classes to extends for Local Reader implementation" >}} 
 
 Once chosen, the Abstract class must be extended by the new reader class and abstract methods must be implemented. Please refer to your native reader
@@ -65,46 +72,77 @@ documentation to implement this elements.
 
 ### Implementation of AbstractLocalReader's abstract classes 
 
-Relying on  native libraries capacities of the device, implementations to be done are:
+Relying on the native smartcard reader of the device, implementations to be done are:
 
-* boolean checkCardPresence()
-* byte[] getATR()
-* openPhysicalChannel()
-* closePhysicalChannel()
-* boolean isPhysicalChannelOpen()
-* boolean isCurrentProtocol(String readerProtocolName)
-* byte[] transmitApdu(byte[] apduIn)
-* activateReaderProtocol(String readerProtocolName)
-* deactivateReaderProtocol(String readerProtocolName)
-* isContactless()
+| Method to implement| Description                       
+|---------------------------------|------------------------------------
+|**boolean checkCardPresence()**|Verify the presence of the card
+|**byte[] getATR()**|provides the information retrieved when powering up the card
+|**openPhysicalChannel()**|Attempts to open the physical channel
+|**closePhysicalChannel()**|Attempts to close the current physical channel
+|**boolean isPhysicalChannelOpen()**|Tells if the physical channel is open or not
+|**boolean isCurrentProtocol(String readerProtocolName)**|Tells if the current card communicates with the protocol provided as an argument
+|**byte[] transmitApdu(byte[] apduIn)**|Transmits a single APDU and receives its response. Both are in the form of an array of bytes.
+|**activateReaderProtocol(String readerProtocolName)**|Activates the protocol provided from the reader's implementation point of view.
+|**deactivateReaderProtocol(String readerProtocolName)**|Deactivates the protocol provided from the reader's implementation point of view.
+|**isContactless()**|Tells if the current card communication is contactless.
+
+Example of implementations are provided [here](#abstractlocalreader).
 
 ### Implementation of AbstractObservableLocalReader's abstract classes 
 
-#### onEvent()
-Will all to handle events like card insertion, card removal...
+In addition of AbstractLocalReader's methods, specific implementations to be done are:
 
-### ObservableReaderNotifiers
-Observable reader's notification is set up by implementing interfaces. Developer has to choose how the reader should behave regarding
-native abilities of the device. It may involve a few more methods to implement.
-
-Interfaces:
-| Card Insertion                  | Card Removal                       
+#### Methods
+| Method to implement| Description                       
 |---------------------------------|------------------------------------
-| WaitForCardInsertionAutonomous  | WaitForCardRemovalAutonomous |
-| WaitForCardInsertionBlocking    | WaitForCardRemovalBlocking|
-| WaitForCardInsertionNonBlocking | WaitForCardRemovalNonBlocking|
-| ----                            | WaitForCardRemovalDuringProcessing|
+|**void onStartDetection()**|Called when the card detection is started by the Keyple Plugin
+|**void onStopDetection()**|called when the card detection is stopped by the Keyple Plugin
+
+Beside the implementation of this methods, this observable reader's notification behaviour must be set.
+
+#### Observable reader's notification
+Observable reader's notification behaviour is set up by implementing interfaces inheriting from ObservableReaderNotifiers. 
+Developer has to choose how the reader should behave regarding its native abilities. It may involve a few more methods to implement. 
+
+It is __mandatory__ to implement one, and only one, interface of each use case presented in the related columns in the below
+table. 
+
+| Card Insertion                  | Card Removal                       | Card Processing                             
+|---------------------------------|------------------------------------|-------------------------------------
+| WaitForCardInsertionAutonomous  | WaitForCardRemovalAutonomous       | WaitForCardRemovalDuringProcessing
+| WaitForCardInsertionBlocking    | WaitForCardRemovalBlocking         | DontWaitForCardRemovalDuringProcessing
+| WaitForCardInsertionNonBlocking | WaitForCardRemovalNonBlocking      | ---
 
 
-Features:
+Description of the Insertion/Removal behaviours:
 |Type| Description                                                                                                                                                                         |
 |----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Autonomous**     | Interface to be implemented by readers that have a fully integrated management of card  communications for card insertion/removal detection                                         |
-| **Blocking**      | Interface to be implemented by readers that are autonomous in the management of waiting for the  insertion/removal of a card and that provide a method to wait for it indefinitely. |
-| **Non Blocking**   | Interface to be implemented by readers that require an active process to detect the card insertion /removal.                                                                        |
-| **During Process** |  Interface to be implemented by readers able to detect a card __removal__ during processing,  between two APDU commands.                                                                 |
+| **[*]Autonomous**     | Interface to be implemented by readers that have a fully integrated management of card  communications for card insertion/removal detection                                         |
+| **[*]Blocking**      | Interface to be implemented by readers that are autonomous in the management of waiting for the  insertion/removal of a card and that provide a method to wait for it indefinitely. |
+| **[*]Non Blocking**   | Interface to be implemented by readers that require an active process to detect the card insertion /removal.                                                                        |
 
-### Examples of implementation
+Description of the processing behaviours:
+|Type| Description                                                                                                                                                                         |
+|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **WaitForCardRemovalDuringProcessing** |  Interface to be implemented by readers __able__ to detect a card __removal__ during processing,  between two APDU commands.      
+| **DontWaitForCardRemovalDuringProcessing** |  Interface to be implemented by readers __not able__ to detect a card __removal__ during processing,  between two APDU commands.      
+                                                           |
+Example of implementations are provided [here](#abstractobservablelocalreader).
+
+### Implementation of AbstractObservableLocalAutonomousReader's abstract classes 
+
+In addition of AbstractObservableLocalReader's methods and ObservableReaderNotifiers implementation, specific methods calls must be done:
+
+| Method to call| Description                       
+|---------------------------------|------------------------------------
+|**void onCardInserted()**|This method must be called when a card is inserted to.
+|**void onCardRemoved()**|This method must be called when a card is removed.
+
+Example of implementations are provided [here](#abstractobservablelocalautonomousreader).
+
+## Examples of implementation
+### AbstractLocalReader
 #### checkCardPresence()
 Allow Keyple to check if the secure elements is present within the reader (inserted, in NFC field...)
 
@@ -473,3 +511,105 @@ PC/SC Example
   }
 ```
 
+### AbstractObservableLocalReader
+#### onStartDetection()
+Android NFC Example
+```kotlin
+    override fun onStartDetection() {
+        // When Keyple Core starts detection, we have to use native Android NFC adapter to start nfc scanning
+        if (contextWeakRef.get() == null) {
+            throw IllegalStateException("onStartDetection() failed : no context available")
+        }
+
+        if (nfcAdapter == null) {
+            nfcAdapter = NfcAdapter.getDefaultAdapter(contextWeakRef.get()!!)
+        }
+        val flags = flags
+        val options = options
+        nfcAdapter?.enableReaderMode(contextWeakRef.get(), this, flags, options)
+    }
+```
+
+PC/SC Example
+```java
+  protected void onStartDetection() {
+    //TODO: completion
+  }
+```
+
+#### onStopDetection()
+Android NFC Example
+```kotlin    
+    override fun onStopDetection() {
+         /When keyple core stop detection, we call native adapter stop NFC scanning
+         nfcAdapter?.let {
+             if (contextWeakRef.get() != null) {
+                 it.disableReaderMode(contextWeakRef.get())
+             } else {
+                 throw IllegalStateException("onStopDetection failed : no context available")
+             }
+         }
+    }
+```
+
+PC/SC Example
+```java
+  protected void onStopDetection() {
+    //TODO: completion
+  }
+```
+
+
+### ObservableReaderNotifiers
+Android NFC Example
+```kotlin
+    //Note simplified view of Android NFc implementation
+    class AndroidNfcReader(activity: Activity) :
+        //In android NFC, we want an easy way to callback Keyple Core when a card is inserted
+        //because this event occurs through the native layer.
+        AbstractObservableLocalAutonomousReader( 
+            AndroidNfcReader.PLUGIN_NAME,
+            AndroidNfcReader.READER_NAME
+        ),
+        //Our reader have an integrated management of card insertion detection
+        WaitForCardInsertionAutonomous,
+        //Our reader do not have an integrated management of card removal detection
+        //but we can use it when the card is no longer in the field and trigger a removal event
+        WaitForCardRemovalBlocking,
+        //We do not want to catch card removal between exchanges with it
+        DontWaitForCardRemovalDuringProcessing{}
+```
+
+PC/SC Example
+```java
+     //We want to observe card events like insertion, removal...
+    class AbstractPcscReader extends bstractObservableLocalReader implements PcscReader, 
+        //Our native reader do not have an integrated management of card insertion detection
+        //but we can use it when the card is in the field and trigger an insertion event
+        WaitForCardInsertionBlocking, 
+        //We want to detect when card is removed while exchanging data with our reader
+        WaitForCardRemovalDuringProcessing, 
+        //Our native reader do not have an integrated management of card removal detection
+        //but we can use it when the card is no longer in the field and trigger a removal event
+        WaitForCardRemovalBlocking {}
+```
+
+### AbstractObservableLocalAutonomousReader
+#### onCardInserted()
+Android NFC Example
+```kotlin
+    //Note simplified view of Android NFc implementation
+    override fun onTagDiscovered(tag: Tag?) {
+        tag?.let {
+            try {
+                tagProxy = TagProxy.getTagProxy(tag)
+                //onTagDiscovered is triggered natively
+                //we use below code to forward the information to Keyple core
+                onCardInserted()
+            } catch (e: KeypleReaderException) {
+                Timber.e(e)
+            }
+        }
+    }
+```
+#### onCardRemoved()
