@@ -1,6 +1,6 @@
 @startuml
 title
-    Keyple Plugin - Observable Reader Notifiers- 1.0.0 (10/11/2020)
+    Keyple Plugin - Abstract Reader classes- 1.0.0 (10/11/2020)
 end title
 
 ' == THEME ==

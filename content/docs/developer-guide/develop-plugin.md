@@ -37,7 +37,7 @@ only have to use a few part of this elements.
 {{< figure library="true" src="plugin-development/class/Plugin_Class_Full.png" title="" >}} 
 
 ## Steps
-Plugi'sn development relies on 3 main steps, each one consists in implementing a few set of abstract classes and interfaces of
+Plugin's development relies on 3 main steps, each one consists in implementing a few set of abstract classes and interfaces of
 plugin package from Keyple Core API:
 1. Import Keyple dependency
 1. Implement a Keyple Reader
@@ -62,9 +62,9 @@ on expected behaviour of the reader:
 * **AbstractObservableLocalReader**: extends AbstractLocalReader and is used to manage the matter of observing card events in the case of a local reader 
 (ie: card insertion, card removal..).
 * **AbstractObservableLocalAutonomousReader**: extends AbstractObservableLocalReader and is used to allow the reader implementation to 
-call back the core when card insertion and removal events occur.
+call back the core when card insertion and removal events occurs.
 
-{{< figure library="true" src="plugin-development/class/AbstractLocalReader_Class.png" title="Abstract classes to extends for Local Reader implementation" >}} 
+{{< figure library="true" src="plugin-development/class/AbstractReaders_Class.png" title="" >}} 
 
 Once chosen, the Abstract class must be extended by the new reader class and abstract methods must be implemented. Please refer to your native reader
 documentation to implement this elements.
@@ -141,6 +141,53 @@ In addition of AbstractObservableLocalReader's methods and ObservableReaderNotif
 |**void onCardRemoved()**|This method must be called when a card is removed.
 
 Example of implementations are provided [here](#abstractobservablelocalautonomousreader).
+
+## Implement Keyple Plugin
+The next step of Keyple plugin development is the implementation of Keyple Plugin Interface (org.eclipse.keyple.core.service.Plugin).
+The plugin will provide access to the readers and handle their lifecycle.
+
+As well as Reader's implementation, abstract classes to extend and interfaces to implement will depend on native abilities of the device.
+
+This implementation of a plugin must be done through the extension of one of three abstract classes provided within the Keyple API. 
+The choice depends on expected behaviour of the plugin:
+
+* **AbstractPlugin**: Basic class for plugin implementation.
+* **AbstractObservablePlugin**: This class provides the means to observe a plugin(insertion/removal of readers).
+* **AbstractThreadedObservablePlugin**: This class provides the means to observe a plugin(insertion/removal of readers) using a monitoring thread.
+
+{{< figure library="true" src="plugin-development/class/AbstractPlugins_Class.png" title="" >}} 
+
+### Implementation of AbstractPlugin's abstract classes 
+#### initNativeReaders()
+
+| Method to implement| Description                       
+|---------------------------------|------------------------------------
+|**ConcurrentMap<String, Reader> initNativeReaders()**|This method is called when registering a plugin. It should be implemented to init readers map.
+
+Example of implementations are provided [here](#initnativereaders-1).
+
+### Implementation of AbstractObservablePlugin's abstract classes 
+There is no additional methods to implement compared to AbstractPlugin
+
+### Implementation of AbstractThreadedObservablePlugin's abstract classes 
+In addition of AbstractObservablePlugin's methods and ObservableReaderNotifiers implementation, specific methods calls must be done:
+
+| Method to implement| Description                       
+|---------------------------------|------------------------------------
+|**SortedSet<String> fetchNativeReadersNames()**|This method  Fetch the list of connected native reader (usually from third party library) and returns their names (or id)
+|**Reader fetchNativeReader(String name)**|Fetch connected native reader (from third party library) by its name returns the current AbstractReader if it is already listed. Creates and returns a new AbstractReader if not.
+
+Example of implementations are provided [here](#abstractthreadedobservableplugin).
+
+### Implementation of AbstractPluginFactory's abstract classes 
+The last step is to implement the Plugin factory which is going to be use by Keyple core to handle the plugin.
+
+| Method to implement| Description                       
+|---------------------------------|------------------------------------
+|**String getPluginName()**|  Retrieve the name of the plugin that will be instantiated by this factory (can be static or dynamic)
+|**Plugin getPlugin()**|Retrieve an instance of a plugin (can be a singleton)
+
+Example of implementations are provided [here](#abstractthreadedobservableplugin).
 
 ## Examples of implementation
 ### AbstractLocalReader
@@ -614,3 +661,130 @@ Android NFC Example
     }
 ```
 #### onCardRemoved()
+
+### AbstractPlugin
+#### initNativeReaders()
+OMAPI Exemple
+```kotlin
+    override fun initNativeReaders(): ConcurrentSkipListMap<String, Reader> {
+        val readers = ConcurrentSkipListMap<String, Reader>()
+        //seService is an instance of android.se.omapi.SEService
+        seService?.readers.forEach { nativeReader ->
+            //mapToReader creates an instance of our Keyple reader from a native reader
+            val reader = mapToReader(nativeReader)
+            readers[reader.name] = reader
+        }
+        return readers
+    }
+```
+
+Android NFC Example
+```kotlin
+    override fun initNativeReaders(): ConcurrentMap<String, Reader>? {
+        val readers = ConcurrentHashMap<String, Reader>()
+        //AndroidNfcReaderImpl is our implementation of Keyple reader
+        readers[AndroidNfcReader.READER_NAME] = AndroidNfcReaderImpl(activity)
+        return readers
+    }
+```
+
+PC/SC Example
+```java
+  protected Map<String, Reader> initNativeReaders() {
+    ConcurrentMap<String, Reader> nativeReaders = new ConcurrentHashMap<String, Reader>();
+    //CardTerminal is a a class from javax.smartcardio
+    CardTerminals terminals = getCardTerminals();
+    try {
+      for (CardTerminal terminal : terminals.list()) {
+        final PcscReader pcscReader = createReader(this.getName(), terminal);
+        nativeReaders.put(pcscReader.getName(), pcscReader);
+      }
+    } catch (CardException e) {
+    }
+    return nativeReaders;
+  }
+```
+
+### AbstractThreadedObservablePlugin
+#### fetchNativeReadersNames()
+PC/SC Example
+```kotlin
+  public SortedSet<String> fetchNativeReadersNames() {
+
+    SortedSet<String> nativeReadersNames = new ConcurrentSkipListSet<String>();
+    CardTerminals terminals = getCardTerminals();
+    try {
+      for (CardTerminal terminal : terminals.list()) {
+        nativeReadersNames.add(terminal.getName());
+      }
+    } catch (CardException e) {
+    }
+    return nativeReadersNames;
+  }
+```
+#### fetchNativeReader()
+PC/SC Example
+```java
+  protected Reader fetchNativeReader(String name) {
+
+    // return the current reader if it is already listed
+    Reader reader = readers.get(name);
+    if (reader != null) {
+      return reader;
+    }
+    /* parse the current PC/SC readers list to create the ProxyReader(s) associated with new reader(s) */
+    CardTerminals terminals = getCardTerminals();
+    try {
+      for (CardTerminal terminal : terminals.list()) {
+        if (terminal.getName().equals(name)) {
+          reader = createReader(this.getName(), terminal);
+        }
+      }
+    } catch (CardException e) {
+      throw new KeypleReaderIOException("Could not access terminals list", e);
+    }
+    if (reader == null) {
+      throw new KeypleReaderNotFoundException("Reader " + name + " not found!");
+    }
+    return reader;
+  }
+```
+
+### PluginFactory
+#### getPluginName()
+Android NFC Example
+```kotlin
+    override fun getPluginName(): String {
+        return AndroidNfcPlugin.PLUGIN_NAME
+    }
+```
+
+PC/SC Example
+```java
+  public String getPluginName() {
+    return PLUGIN_NAME;
+  }
+```
+
+#### getPlugin()
+Android NFC Example
+```kotlin
+    override fun getPlugin(): Plugin {
+        return AndroidNfcPluginImpl(activity)
+    }
+```
+
+PC/SC Example
+```java
+    public PcscPlugin getPlugin() {
+    try {
+      if (isOsWin) {
+        return PcscPluginWinImpl.getInstance();
+      } else {
+        return PcscPluginImpl.getInstance();
+      }
+    } catch (Exception e) {
+      throw new KeyplePluginInstantiationException("Can not access smartcard.io readers", e);
+    }
+    }
+```
