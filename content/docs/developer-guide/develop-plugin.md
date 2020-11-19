@@ -64,8 +64,7 @@ on expected behaviour of the reader:
 * **AbstractObservableLocalAutonomousReader**: extends AbstractObservableLocalReader and is used to allow the reader implementation to 
 call back the core when card insertion and removal events occur.
 
-//TODO: Update
-{{< figure library="true" src="plugin-development/class/readers.png" title="Abstract classes to extends for Local Reader implementation" >}} 
+{{< figure library="true" src="plugin-development/class/AbstractLocalReader_Class.png" title="Abstract classes to extends for Local Reader implementation" >}} 
 
 Once chosen, the Abstract class must be extended by the new reader class and abstract methods must be implemented. Please refer to your native reader
 documentation to implement this elements.
@@ -104,6 +103,8 @@ Beside the implementation of this methods, this observable reader's notification
 #### Observable reader's notification
 Observable reader's notification behaviour is set up by implementing interfaces inheriting from ObservableReaderNotifiers. 
 Developer has to choose how the reader should behave regarding its native abilities. It may involve a few more methods to implement. 
+
+{{< figure library="true" src="plugin-development/class/ObservableReaderNotifiers_Interfaces.png" title="" >}} 
 
 It is __mandatory__ to implement one, and only one, interface of each use case presented in the related columns in the below
 table. 
