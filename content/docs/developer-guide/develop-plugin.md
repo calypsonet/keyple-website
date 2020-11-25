@@ -86,6 +86,8 @@ documentation to implement this elements.
 
 Relying on the native smartcard reader of the device, implementations to be done are:
 
+<div id="plugins-table-1">
+
 | Method to implement| Description                       
 |---------------------------------|------------------------------------
 |**`boolean checkCardPresence()`**|Verify the presence of the card
@@ -98,6 +100,13 @@ Relying on the native smartcard reader of the device, implementations to be done
 |**`activateReaderProtocol(String readerProtocolName)`**|Activates the protocol provided from the reader's implementation point of view.
 |**`deactivateReaderProtocol(String readerProtocolName)`**|Deactivates the protocol provided from the reader's implementation point of view.
 |**`isContactless()`**|Tells if the current card communication is contactless.
+
+</div>
+<style>
+#plugins-table-1 table th:first-of-type {
+    width: 450px;
+}
+</style>
 
 Example of implementations are provided [here](#abstractlocalreader).
 
@@ -130,18 +139,38 @@ table.
 
 
 Description of the Insertion/Removal behaviours:
+
+<div id="plugins-table-2">
+
 |Type| Description |
 | --- | --- |
 | **`[*]Autonomous`**   | Interface to be implemented by readers that have a fully integrated management of card  communications for card insertion/removal detection                                         |
 | **`[*]Blocking`**     | Interface to be implemented by readers that are autonomous in the management of waiting for the  insertion/removal of a card and that provide a method to wait for it indefinitely. |
 | **`[*]Non Blocking`** | Interface to be implemented by readers that require an active process to detect the card insertion /removal.                                                                        |
 
+</div>
+<style>
+#plugins-table-2 table th:first-of-type {
+    width: 180px;
+}
+</style>
+
 Description of the processing behaviours:
+
+<div id="plugins-table-3">
+
 |Type| Description |
 | --- | --- |
 | **`WaitForCardRemovalDuringProcessing`** |  Interface to be implemented by readers __able__ to detect a card __removal__ during processing,  between two APDU commands.      
-| **`DontWaitForCardRemovalDuringProcessing`** |  Interface to be implemented by readers __not able__ to detect a card __removal__ during processing,  between two APDU commands.      
-                                                           |
+| **`DontWaitForCardRemovalDuringProcessing`** |  Interface to be implemented by readers __not able__ to detect a card __removal__ during processing,  between two APDU commands.      |
+
+</div>
+<style>
+#plugins-table-3 table th:first-of-type {
+    width: 350px;
+}
+</style>
+
 Example of implementations are provided [here](#abstractobservablelocalreader).
 
 ### Implementation of AbstractObservableLocalAutonomousReader's abstract classes 
@@ -185,20 +214,38 @@ There is no additional methods to implement compared to AbstractPlugin
 ### Implementation of AbstractThreadedObservablePlugin's abstract classes 
 In addition of AbstractObservablePlugin's methods and ObservableReaderNotifiers implementation, specific methods invocations must be done:
 
+<div id="plugins-table-4">
+
 | Method to implement| Description                       
 |---------------------------------|------------------------------------
 |**`SortedSet<String> fetchNativeReadersNames()`**|This method  Fetch the list of connected native reader (usually from third party library) and returns their names (or id)
 |**`Reader fetchNativeReader(String name)`**|Fetch connected native reader (from third party library) by its name returns the current AbstractReader if it is already listed. Creates and returns a new AbstractReader if not.
+
+</div>
+<style>
+#plugins-table-4 table th:first-of-type {
+    width: 300px;
+}
+</style>
 
 Example of implementations are provided [here](#abstractthreadedobservableplugin).
 
 ### Implementation of AbstractPluginFactory's abstract classes 
 The last step is to implement the Plugin factory which is going to be use by Keyple core to handle the plugin.
 
+<div id="plugins-table-5">
+
 | Method to implement| Description                       
 |---------------------------------|------------------------------------
 |**`String getPluginName()`**|  Retrieve the name of the plugin that will be instantiated by this factory (can be static or dynamic)
 |**`Plugin getPlugin()`**|Retrieve an instance of a plugin (can be a singleton)
+
+</div>
+<style>
+#plugins-table-5 table th:first-of-type {
+    width: 220px;
+}
+</style>
 
 Example of implementations are provided [here](#abstractthreadedobservableplugin).
 
