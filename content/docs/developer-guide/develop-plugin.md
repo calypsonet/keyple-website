@@ -7,7 +7,7 @@ weight: 330
 ---
 
 ## Overview
-In order to provide an easy way to port a Keyple applications from a device with a specific card reader to another, a plugin system
+In order to provide an easy way to port a Keyple application from a device with a specific card reader to another, a plugin system
 as been developed. When a developer wants to include Keyple features within his project, he has to initialize the SmartCardService by providing a
 plugin Factory available with in the plugin library. The plugin to use depends on the targeted device and running environment.
 
@@ -45,7 +45,7 @@ The purpose of this guide is to support developers in this process.
 
 For the record, this is a wide view of classes implied in the plugin system. It is designed to natively handle as much 
 use cas as possible while being easy to use. It results of several internal classes, however, plugin's developers will 
-only have to use a few part of this elements.
+only have to use a few part of these elements.
 
 {{< figure library="true" src="plugin-development/class/Plugin_Class_Full.svg" title="" >}} 
 
@@ -119,6 +119,7 @@ In addition of AbstractLocalReader's methods, specific implementations to be don
 | --- | --- | 
 |**`void onStartDetection()`**|Invoked when the card detection is started by the Keyple Plugin | 
 |**`void onStopDetection()`**|Invoked when the card detection is stopped by the Keyple Plugin | 
+|**`ReaderObservationExceptionHandler getObservationExceptionHandler()`**|Allows to invoke the defined handler when an exception condition needs to be transmitted to the application level| 
 
 Beside the implementation of this methods, this observable reader's notification behaviour must be set.
 
@@ -252,7 +253,7 @@ Example of implementations are provided [here](#abstractthreadedobservableplugin
 ## Examples of implementation
 ### AbstractLocalReader
 #### checkCardPresence()
-Allow Keyple to check if the secure elements is present within the reader (inserted, in NFC field...)
+Allow Keyple to check if the smartcard is present within the reader (inserted, in NFC field...)
 
 OMAPI Example
 ```kotlin
@@ -348,7 +349,7 @@ public override fun openPhysicalChannel() {
 PC/SC Example
 ```java
 [java]
-public override fun checkCardPresence(): Boolean {
+public void openPhysicalChannel() {
     //card is an instance of Card provided by javax.smartcardio
     if (card == null) {
         this.card = this.terminal.connect(parameterCardProtocol);
@@ -431,17 +432,8 @@ public override fun isPhysicalChannelOpen(): Boolean {
 PC/SC Example
 ```java
 [java]
-protected void closePhysicalChannel() {
-    try {
-     //card is an instance of Card provided by javax.smartcardio
-      if (card != null) {
-        channel = null;
-        card.disconnect(true);
-        card = null;
-      }
-    } catch (CardException e) {
-      throw new KeypleReaderIOException("Error while closing physical channel", e);
-    }
+protected boolean isPhysicalChannelOpen() {
+    return card != null;
 }
 ```
 
@@ -782,7 +774,7 @@ Android NFC Example
 override fun initNativeReaders(): ConcurrentMap<String, Reader>? {
     val readers = ConcurrentHashMap<String, Reader>()
     //AndroidNfcReaderImpl is our implementation of Keyple reader
-    readers[AndroidNfcReader.READER_NAME] = AndroidNfcReaderImpl(activity)
+    readers[AndroidNfcReader.READER_NAME] = AndroidNfcReaderImpl(activity, readerObservationExceptionHandler)
     return readers
 }
 ```
@@ -873,7 +865,7 @@ Android NFC Example
 ```kotlin
 [kotlin]
 override fun getPlugin(): Plugin {
-    return AndroidNfcPluginImpl(activity)
+    return AndroidNfcPluginImpl(activity, readerObservationExceptionHandler)
 }
 ```
 
