@@ -58,41 +58,20 @@ package "org.eclipse.keyple.core.plugin" as root {
     }
 
      +abstract class AbstractPlugin{
-        +final String getName()
-        +final Map<String, Reader> getReaders()
-        +final Set<String> getReaderNames()
-        +final Reader getReader(String name)
-        +void register()
-        +void unregister()
-        #void checkStatus()
-        #{abstract} Map<String, Reader> initNativeReaders()
 
-    }
-    +abstract class AbstractObservablePlugin {
-        +void addObserver(final ObservablePlugin.PluginObserver observer)
-        +void removeObserver(final ObservablePlugin.PluginObserver observer)
-        +void clearObservers()
-        +int countObservers()
-        +void notifyObservers(final PluginEvent event)
-        +void unregister()
+
     }
 
     +abstract class AbstractThreadedObservablePlugin {
-        +void addObserver(final ObservablePlugin.PluginObserver observer)
-        +void removeObserver(final ObservablePlugin.PluginObserver observer)
-        +void void clearObservers()
-        #void Boolean isMonitoring()
-        #{abstract} SortedSet<String> fetchNativeReadersNames()
-        #{abstract} Reader fetchNativeReader(String name)
+
     }
 }
 
 
 ' Associations
 Plugin <|-- AbstractPlugin #C_USE
-AbstractPlugin <|-- AbstractObservablePlugin #C_USE
-AbstractObservablePlugin <|-- AbstractThreadedObservablePlugin #C_USE
+AbstractPlugin <|-- AbstractThreadedObservablePlugin #C_USE
 Plugin <|-- ObservablePlugin #C_USE
 ObservablePlugin <|-- ObservablePluginNotifier #C_USE
-ObservablePluginNotifier <|-- AbstractObservablePlugin #C_USE
+ObservablePluginNotifier <|-- AbstractThreadedObservablePlugin #C_USE
 @enduml

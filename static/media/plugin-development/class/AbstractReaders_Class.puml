@@ -51,75 +51,23 @@ package "org.eclipse.keyple.core.plugin" as root {
 
     package "reader"{
 
-        +abstract class AbstractReader{
-            +String getName()
-            +String getPluginName()
-            +List<CardSelectionResponse> transmitCardSelectionRequests(List<CardSelectionRequest> cardSelectionRequests,
-            MultiSelectionProcessing multiSelectionProcessing, ChannelControl channelControl)
-            +CardResponse transmitCardRequest(CardRequest cardRequest,
-            ChannelControl channelControl)
-            +void register()
-            +void unregister()
-            #void checkStatus()
-            #{abstract} List<CardSelectionResponse> processCardSelectionRequests(List<CardSelectionRequest> cardSelectionRequests,
-            MultiSelectionProcessing multiSelectionProcessing,ChannelControl channelControl)
-            #{abstract} CardResponse processCardRequest(CardRequest cardRequest, ChannelControl channelControl)
-        }
-
         +abstract class AbstractLocalReader{
-            +boolean isCardPresent()
-            +void releaseChannel()
-            +void activateProtocol(String readerProtocolName, String applicationProtocolName)
-            +void deactivateProtocol(String readerProtocolName)
-            #void closeLogicalAndPhysicalChannels()
-            #List<CardSelectionResponse> processCardSelectionRequests(List<CardSelectionRequest> cardSelectionRequests,
-            MultiSelectionProcessing multiSelectionProcessing,ChannelControl channelControl)
-            #CardResponse processCardRequest()
-            #{abstract} boolean checkCardPresence()
-            #{abstract} byte[] getATR()
-            #{abstract} void openPhysicalChannel()
-            #{abstract} void closePhysicalChannel()
-            #{abstract} boolean isPhysicalChannelOpen()
-            #{abstract} boolean isCurrentProtocol(String readerProtocolName)
-            #{abstract} byte[] transmitApdu(byte[] apduIn)
-            #{abstract} void activateReaderProtocol(String readerProtocolName)
-            #{abstract} void deactivateReaderProtocol(String readerProtocolName)
+
          }
 
          +abstract class AbstractObservableLocalReader{
-            #{abstract} void onStartDetection()
-            #{abstract} void onStopDetection()
-            #{abstract} ReaderObservationExceptionHandler getObservationExceptionHandler()
-            +void addObserver(final ObservableReader.ReaderObserver observer)
-            +void removeObserver(final ObservableReader.ReaderObserver observer)
-            +void notifyObservers(final ReaderEvent event)
-            +int countObservers()
-            +void clearObservers()
-            +boolean isCardPresent()
-            +void startCardDetection(ObservableReader.PollingMode pollingMode)
-            +void stopCardDetection()
-            +void setDefaultSelectionRequest(AbstractDefaultSelectionsRequest defaultSelectionsRequest,
-            ObservableReader.NotificationMode notificationMode)
-            +void setDefaultSelectionRequest(AbstractDefaultSelectionsRequest defaultSelectionsRequest,
-            ObservableReader.NotificationMode notificationMode,ObservableReader.PollingMode pollingMode)
-            +void terminateCardCommunication()
-            +void finalizeCardProcessing()
-            +void unregister()
-            #void onEvent(InternalEvent event)
 
          }
 
          +abstract class AbstractObservableLocalAutonomousReader{
-            #void void onCardInserted()
-            #void void onCardRemoved()
+
          }
     }
 }
 
 
 ' Associations
-ProxyReader <|-- AbstractReader #C_USE
-AbstractReader <|-- AbstractLocalReader #C_USE
+ProxyReader <|-- AbstractLocalReader #C_USE
 AbstractLocalReader <|-- AbstractObservableLocalReader #C_USE
 AbstractObservableLocalReader <|-- AbstractObservableLocalAutonomousReader #C_USE
 

@@ -34,25 +34,15 @@ The list of reader plugins is maintained on this pages:
 
 [Java Reader Plugins]({{< ref "components-java/plugins/_index.md" >}})
 
-[C++ Reader Plugins]({{< ref "components-cpp/plugins/_index.md" >}})
-
-
-
-## Class diagram of plugin package
-
-For the record, this is a wide view of classes implied in the plugin system. It is designed to natively handle as much 
-use cas as possible while being easy to use. It results of several internal classes, however, plugin's developers will 
-only have to use a few part of these elements.
-
-{{< figure library="true" src="plugin-development/class/Plugin_Class_Full.svg" title="" >}} 
+[C++ Reader Plugins]({{< ref "components-cpp/plugins/_index.md" >}}) 
 
 ## Steps
 Plugin's development relies on 3 main steps, each one consists in implementing a few set of abstract classes and interfaces of
 plugin package from Keyple Core API:
-1. Import Keyple dependency 
-1. Implement a Keyple Reader
-1. Implement a Keyple Plugin
+1. Import Keyple dependency
 1. Implement a Keyple Plugin Factory.
+1. Implement a Keyple Plugin
+1. Implement a Keyple Reader
 
 
 ## Imports 
@@ -61,14 +51,83 @@ Your plugin will use be based upon Keyple Core library.
 Using the [Java components]({{< ref "components-java/core/_index.md" >}}) or [C++ components]({{< ref "components-cpp/core/_index.md" >}})
 pages, import **Keyple Core** into your project.
 
+## Implement Keyple Plugin Factory
+The entry point of Keyple's card Proxy Service is the singleton SmartCardService. Its instance has to be called by a ticketing 
+application in order to establish a link with a card’s application.
+This singleton will allow to register/unregister plugin, maintain and provide a list of registered plugins. Registeration of 
+a plugin is done by using a Plugin Factory implementation. 
+This implementation is the first step of our guide.
+
+### Implementation of AbstractPluginFactory's abstract classes 
+Following methods has to be implemented
+
+<div id="plugins-table-5">
+
+| Method to implement| Description                       
+|---------------------------------|------------------------------------
+|**`String getPluginName()`**|  Retrieve the name of the plugin that will be instantiated by this factory (can be static or dynamic)
+|**`Plugin getPlugin()`**|Retrieve an instance of a plugin (can be a singleton)
+
+</div>
+<style>
+#plugins-table-5 table th:first-of-type {
+    width: 220px;
+}
+</style>
+
+Example of implementations are provided [here](#abstractthreadedobservableplugin).
+
+## Implement Keyple Plugin
+SmartCardService will provide instances of Keyple plugins to be used within the API. A Keyple Plugin is a component giving access to the 
+readers and handling their lifecycle.
+The next step of Keyple plugin development is the implementation of Keyple Plugin Interface (org.eclipse.keyple.core.service.Plugin).
+
+As well as Reader's implementation, abstract classes to extend and interfaces to implement will depend on native abilities of the device.
+
+This implementation of a plugin must be done through the extension of one of three abstract classes provided within the Keyple API. 
+The choice depends on expected behaviour of the device readers:
+
+* **`AbstractPlugin`**: Base class for plugin implementation. Should be use when device's readers configuration is static (readers cannot be removed) like Android NFC or OMAPI.
+* **`AbstractThreadedObservablePlugin`**: Should be used when device's readers configuration allows observation of hot insertion/removal of readers. For example an USB PC/SC reader.
+
+{{< figure library="true" src="plugin-development/class/AbstractPlugins_Class.svg" title="" >}} 
+
+### Implementation of AbstractPlugin's abstract classes 
+#### initNativeReaders()
+
+| Method to implement| Description                       
+|---------------------------------|------------------------------------
+|**`ConcurrentMap<String, Reader> initNativeReaders()`**|This method is invoked when registering a plugin. It should be implemented to init readers map.
+
+Example of implementations are provided [here](#initnativereaders-1).
+
+### Implementation of AbstractThreadedObservablePlugin's abstract classes 
+In addition of AbstractPlugin's methods and ObservableReaderNotifiers implementation, specific methods invocations must be done:
+
+<div id="plugins-table-4">
+
+| Method to implement| Description                       
+|---------------------------------|------------------------------------
+|**`SortedSet<String> fetchNativeReadersNames()`**|This method Fetch the list of connected native reader (usually from third party library) and returns their names (or id)
+|**`Reader fetchNativeReader(String name)`**|Fetch connected native reader (from third party library) by its name returns the current Reader if it is already listed. Creates and returns a new Reader if not.
+|**`PluginObservationExceptionHandler getObservationExceptionHandler()`**|Allows to call the defined handler when an exception condition needs to be transmitted to the application level.
+
+</div>
+<style>
+#plugins-table-4 table th:first-of-type {
+    width: 300px;
+}
+</style>
+
+Example of implementations are provided [here](#abstractthreadedobservableplugin).
 
 ## Implement Keyple Reader
-The first step of a Keyple plugin development is the implementation of Keyple Reader Interface (org.eclipse.keyple.core.Reader). 
-This implementation should use device's native smartcard reader library (or sdk package) to map interfaces used by Keyple API. 
+The last step of a Keyple plugin development purpose, is to provide Keyple a mapping of hardware specific API. This mapping will allow Keyple
+communicate with the card's application.
 
 This implementation of a local reader must be done through the extension of one of three abstract classes provided within the Keyple API. The choice depends
 on expected behaviour of the reader:
-* **`AbstractLocalReader`**: Basic abstract class to use for local reader implementation.
+* **`AbstractLocalReader`**: Basic abstract class to use for local reader implementation. Should be used if reader does not have hot card insertion/removal ability.
 * **`AbstractObservableLocalReader`**: extends AbstractLocalReader and is used to manage the matter of observing card events in the case of a local reader 
 (ie: card insertion, card removal..).
 * **`AbstractObservableLocalAutonomousReader`**: extends AbstractObservableLocalReader and is used to allow the reader implementation to 
@@ -181,71 +240,6 @@ In addition of AbstractObservableLocalReader's methods and ObservableReaderNotif
 |**`void onCardRemoved()`**|This method must be invoked when a card is removed.
 
 Example of implementations are provided [here](#abstractobservablelocalautonomousreader).
-
-## Implement Keyple Plugin
-The next step of Keyple plugin development is the implementation of Keyple Plugin Interface (org.eclipse.keyple.core.service.Plugin).
-The plugin will provide access to the readers and handle their lifecycle.
-
-As well as Reader's implementation, abstract classes to extend and interfaces to implement will depend on native abilities of the device.
-
-This implementation of a plugin must be done through the extension of one of three abstract classes provided within the Keyple API. 
-The choice depends on expected behaviour of the plugin:
-
-* **`AbstractPlugin`**: Basic class for plugin implementation.
-* **`AbstractObservablePlugin`**: This class provides the means to observe a plugin(insertion/removal of readers).
-* **`AbstractThreadedObservablePlugin`**: This class provides the means to observe a plugin(insertion/removal of readers) using a monitoring thread.
-
-{{< figure library="true" src="plugin-development/class/AbstractPlugins_Class.svg" title="" >}} 
-
-### Implementation of AbstractPlugin's abstract classes 
-#### initNativeReaders()
-
-| Method to implement| Description                       
-|---------------------------------|------------------------------------
-|**`ConcurrentMap<String, Reader> initNativeReaders()`**|This method is invoked when registering a plugin. It should be implemented to init readers map.
-
-Example of implementations are provided [here](#initnativereaders-1).
-
-### Implementation of AbstractObservablePlugin's abstract classes 
-There is no additional methods to implement compared to AbstractPlugin
-
-### Implementation of AbstractThreadedObservablePlugin's abstract classes 
-In addition of AbstractObservablePlugin's methods and ObservableReaderNotifiers implementation, specific methods invocations must be done:
-
-<div id="plugins-table-4">
-
-| Method to implement| Description                       
-|---------------------------------|------------------------------------
-|**`SortedSet<String> fetchNativeReadersNames()`**|This method  Fetch the list of connected native reader (usually from third party library) and returns their names (or id)
-|**`Reader fetchNativeReader(String name)`**|Fetch connected native reader (from third party library) by its name returns the current AbstractReader if it is already listed. Creates and returns a new AbstractReader if not.
-
-</div>
-<style>
-#plugins-table-4 table th:first-of-type {
-    width: 300px;
-}
-</style>
-
-Example of implementations are provided [here](#abstractthreadedobservableplugin).
-
-### Implementation of AbstractPluginFactory's abstract classes 
-The last step is to implement the Plugin factory which is going to be use by Keyple core to handle the plugin.
-
-<div id="plugins-table-5">
-
-| Method to implement| Description                       
-|---------------------------------|------------------------------------
-|**`String getPluginName()`**|  Retrieve the name of the plugin that will be instantiated by this factory (can be static or dynamic)
-|**`Plugin getPlugin()`**|Retrieve an instance of a plugin (can be a singleton)
-
-</div>
-<style>
-#plugins-table-5 table th:first-of-type {
-    width: 220px;
-}
-</style>
-
-Example of implementations are provided [here](#abstractthreadedobservableplugin).
 
 ## Examples of implementation
 ### AbstractLocalReader
