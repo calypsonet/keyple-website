@@ -8,8 +8,6 @@ weight: 330
 
 ## Overview
 
-**Work in Progress**
-
 Keyple API was designed to support an extension system. On top of **Keyple Core**, APIs can be developed to extend
 Keyple features. For example, Calypso Network Association provides **Keyple Calypso Extension**. 
 
@@ -67,6 +65,91 @@ Object containing the description of a Calypso Elementary File. Can be retrieved
     String eventLog = ByteArrayUtil.toHex(efEventLog.getData().getContent());
     ...
 ```
+
+### Calypso SAM
+Concentrates all the informations we know about the SAM currently selected. Accessible informations are:
+ * The Sam Revision
+ * The Serial number
+ * The Platform identifier
+ * The Application Type
+ * The Application SubType
+ * The Software Issuer identifier
+ * The Software Version number
+ * The Software Revision number
+
+Calypso SAM fields are populated by analysis of the ATR within a CardSelectionResponse obtained through the process of a SAM selection.
+
+```java
+    ...
+    byte[] serialNumber = calypsoSam.getSerialNumber()
+    ...
+```
+
+### PoSecuritySettings
+Concentrate the security settings involved in Calypso Secure Sessions:
+* A reference to the Sam resource
+* The default KIF  
+* The default KVC
+* The default Key Record Number
+* The modification mode
+* The ratification mode
+* The pin transmission mode
+* The default Pin Ciphering Key
+* The SV Get Log Reade mode
+* the SV Negative balance
+
+ The fields are populated with default values when the object is instantiated but can be customized to adjust the settings
+ to the application needs.
+ 
+ ```java
+     ...
+     poSecuritySettings.getSessionModificationMode()
+     ...
+ ```
+
+Secure session settings can be finely tuned with PoSecuritySettings and a set of enums provided by Keyple:
+
+#### Modification mode
+Indicates whether the secure session can be closed and reopened to manage the limitation of the PO buffer memory.
+| ModificationMode| Description                       
+|---------------------------------|------------------------------------
+|**`ATOMIC`**|The secure session is atomic.
+|**`MULTIPLE`**|Several secure sessions can be chained (to manage the writing of large amounts of data).
+
+ ```java
+     ...
+    PoSecuritySettings poSecuritySettings =
+        new PoSecuritySettings.PoSecuritySettingsBuilder(samResource)
+            .svGetLogReadMode(SvSettings.LogRead.ALL)
+            .build();
+     ...
+ ```
+
+#### Ratification mode
+The ratification mode defines the behavior of processClosing regarding the ratification process.
+| RatificationMode| Description                       
+|---------------------------------|------------------------------------
+|**`CLOSE_RATIFIED`**|Close session with ratification.
+|**`CLOSE_NOT_RATIFIED`**|Close session without ratification
+
+ ```java
+     ...
+    PoSecuritySettings poSecuritySettings =
+        new PoSecuritySettings.PoSecuritySettingsBuilder(samResource)
+            .ratificationMode(RatificationMode.CLOSE_RATIFIED)
+            .build();
+     ...
+ ```
+
+#### Pin Transmission Mode
+Defines the PIN transmission modes: plain or encrypted.
+| PinTransmissionMode|                      
+|---------------------------------|
+|**`PLAIN`**|
+|**`ENCRYPTED`**|
+
+## Basic Operations
+
 ### PoSelection
 
 Service extending Keyple Core Abstract Card Selection to manage specific features of Calypso POs during the selection:
@@ -105,26 +188,7 @@ possible responses to additional APDU commands executed after the selection.
     ...
 ```
 
-### Calypso SAM
-Concentrates all the informations we know about the SAM currently selected. Accessible informations are:
- * The Sam Revision
- * The Serial number
- * The Platform identifier
- * The Application Type
- * The Application SubType
- * The Software Issuer identifier
- * The Software Version number
- * The Software Revision number
-
-Calypso SAM fields are populated by analysis of the ATR within a CardSelectionResponse obtained through the process of a SAM selection.
-
-```java
-    ...
-    byte[] serialNumber = calypsoSam.getSerialNumber()
-    ...
-```
-
-### SamSelection
+## SamSelection
 Service extending Keyple Core Abstract Card Selection specialized to manage the specific characteristics of Calypso SAMs. 
 The service provides an instance of Calypso SAM and may execute the unlock command during the selection process.
 
@@ -147,37 +211,8 @@ The service provides an instance of Calypso SAM and may execute the unlock comma
     ...
 ```
 
-### PoSecuritySettings
-Concentrate the security settings involved in Calypso Secure Sessions:
-* A reference to the Sam resource
-* The default KIF  
-* The default KVC
-* The default Key Record Number
-* The modification mode
-* The ratification mode
-* The pin transmission mode
-* The default Pin Ciphering Key
-* The SV Get Log Reade mode
-* the SV Negative balance
-
- The fields are populated with default values when the object is instantiated but can be customized to adjust the settings
- to the application needs.
- 
-```java
-    // Security settings
-    // Both Reload and Debit SV logs are requested
-    PoSecuritySettings poSecuritySettings =
-        new PoSecuritySettings.PoSecuritySettingsBuilder(samResource)
-            .svGetLogReadMode(SvSettings.LogRead.ALL)
-            .build();
-```
-
-### SAM Resource Managers
-Services providing methods to allocate/deallocate SAM resources. Keyple Calypso API provides 3 type of managers: Default, 
-Factory, Pool. The choice of the manager to use depends on the abilities of the plugin used for the SAM connexion.
-
 ### PoTransaction
-Service providing high-level API to manage transactions with a Calypso PO. The tied Calypso PO Object  is kept and updated at
+Service providing high-level API to manage transactions with a Calypso PO. The tied Calypso PO Object is kept and updated at
 each step of using this service. 
 
 This service workflow is composed of two steps:
@@ -186,11 +221,21 @@ This service workflow is composed of two steps:
 
 ```java
     ...
+    // CardResource allow management of specific card.
+    // In this example a SAM is available 
     CardResource<CalypsoPo> poResource = new CardResource<CalypsoPo>(poReader, calypsoPo);
+    CardResource<CalypsoSam> samResource = new CardResource<CalypsoPo>(samReader, calypsoSam);
     
+    // Configure Security settings
+    // Both Reload and Debit SV logs are requested
+    PoSecuritySettings poSecuritySettings =
+        new PoSecuritySettings.PoSecuritySettingsBuilder(samResource)
+            .svGetLogReadMode(SvSettings.LogRead.ALL)
+            .build();
+
     PoTransaction poTransaction = new PoTransaction(poResource, poSecuritySettings);
 
-    // Read the EventLog file at the Session Opening
+    // Read the EventLog file at record 1 within the Session Opening
     poTransaction.prepareReadRecordFile(CalypsoClassicInfo.SFI_EventLog, CalypsoClassicInfo.RECORD_NUMBER_1);
 
     // Open a secure session (DEBIT level) and execute the prepared command
@@ -199,6 +244,7 @@ This service workflow is composed of two steps:
     // Get and display the EventLog data
     ElementaryFile efEventLog = calypsoPo.getFileBySfi(CalypsoClassicInfo.SFI_EventLog);
 
+    // Example of data parsing
     String eventLog = ByteArrayUtil.toHex(efEventLog.getData().getContent());
 
     // Prepare a SV Debit (this command could also have been placed before processOpening
@@ -216,16 +262,20 @@ This service workflow is composed of two steps:
     ...
 ```
 
-## API
-* The diagram below represents the main classes implemented around the **Transaction package**.
-  {{< figure library="true"
-  src="calypso-app-development/class/TransactionPackage_Class.svg"
-  title="" >}}
+#### Secure Session Access level
 
-* The diagram below represents the main classes implemented around the **Command package**.
-  {{< figure library="true"
-  src="calypso-app-development/class/CommandPackage_Class.svg"
-  title="" >}}
+PoTransaction.processOpening() allows to open a Calypso Secure Session. If commands have been prepared previously, they will be executed. 
+
+Keyple provides an enums to easily configure the Secure Session AccessLevel:
+
+| AccessLevel| Description                       
+|---------------------------------|------------------------------------
+|**`SESSION_LVL_PERSO`**|Session Access Level used for personalization purposes.
+|**`SESSION_LVL_LOAD`**|Session Access Level used for reloading purposes.
+|**`SESSION_LVL_DEBIT`**|Session Access Level used for validating and debiting purposes. 
+
+
+  
   
 ## Examples
 Detailed use case examples can be seen here:
