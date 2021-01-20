@@ -11,8 +11,8 @@ weight: 330
 Keyple API was designed to support an extension system. On top of **Keyple Core**, APIs can be developed to extend
 Keyple features. For example, Calypso Network Association provides **Keyple Calypso Extension**. 
 
-The use of **Keyple Calypso Extension** open the ability to operate commands with a calypso Portable Object and to manage a 
-secure calypso transaction.
+The use of **Keyple Calypso Extension** open the ability to operate commands with a Calypso Portable Object and to manage a 
+secure Calypso transaction seamlessly. It completely hides the details of the APDU commands that are sent to POs and SAMs, which are usually tedious operations.
 
 The diagram below shows the role of the **Keyple Calypso Extension** components in the software layers for a standalone application :
 
@@ -31,17 +31,18 @@ The diagram below shows the role of the **Keyple Calypso Extension** components 
 1. Start playing with **Keyple**.
 
 ## Concepts
+
 Here are the main concepts to keep in mind before continuing to read this developer guide :
 
 ### Calypso PO
-Concentrate all known informations about the Personal Object being processed. Accessible informations are
+Concentrates all known information about the Personal Object being processed. Accessible information are
 * The application identification fields (revision/version, class, DF name, serial number, ATR, issuer)
 * The indication of the presence of optional features (Stored Value, PIN, Rev3.2 mode, ratification management)
-* The management information of the modification buffer
+* The management information of the session modifications buffer
 * The invalidation status
 * The files, counters, SV data read or modified during the execution of the processes defined  by PoTransaction
 
-Calypso PO fields are populated from a CardSelectionResponse obtained through the process of a PO selection.
+The Calypso PO fields are first populated from the CardSelectionResponse obtained through the PO selection process then each time a PoTransaction "process" method is invoked.
 
 ```java
     ...
@@ -77,7 +78,7 @@ Concentrates all the informations we know about the SAM currently selected. Acce
  * The Software Version number
  * The Software Revision number
 
-Calypso SAM fields are populated by analysis of the ATR within a CardSelectionResponse obtained through the process of a SAM selection.
+Calypso SAM fields are populated by analysis of the ATR within a CardSelectionResponse obtained through the SAM selection process.
 
 ```java
     ...
@@ -87,7 +88,7 @@ Calypso SAM fields are populated by analysis of the ATR within a CardSelectionRe
 
 ### PoSecuritySettings
 Concentrate the security settings involved in Calypso Secure Sessions:
-* A reference to the Sam resource
+* A reference to the SAM resource
 * The default KIF  
 * The default KVC
 * The default Key Record Number
@@ -95,8 +96,8 @@ Concentrate the security settings involved in Calypso Secure Sessions:
 * The ratification mode
 * The pin transmission mode
 * The default Pin Ciphering Key
-* The SV Get Log Reade mode
-* the SV Negative balance
+* The SV Get Log Read mode
+* The SV Negative balance mode
 
  The fields are populated with default values when the object is instantiated but can be customized to adjust the settings
  to the application needs.
@@ -110,11 +111,11 @@ Concentrate the security settings involved in Calypso Secure Sessions:
 Secure session settings can be finely tuned with PoSecuritySettings and a set of enums provided by Keyple:
 
 #### Modification mode
-Indicates whether the secure session can be closed and reopened to manage the limitation of the PO buffer memory.
+Indicates whether the secure session can be closed and reopened to manage the limitation of the PO buffer memory (session modifications buffer).
 | ModificationMode| Description                       
 |---------------------------------|------------------------------------
 |**`ATOMIC`**|The secure session is atomic.
-|**`MULTIPLE`**|Several secure sessions can be chained (to manage the writing of large amounts of data).
+|**`MULTIPLE`**|Several secure sessions will be chained (to manage the writing of large amounts of data).
 
  ```java
      ...
@@ -148,13 +149,29 @@ Defines the PIN transmission modes: plain or encrypted.
 |**`PLAIN`**|
 |**`ENCRYPTED`**|
 
+#### SV Log Read mode
+Specifies whether only one or both SV logs (debit and load) should be read.
+| LogRead|                      
+|---------------------------------|
+|**`SINGLE`**|
+|**`ALL`**|
+
+#### SV Negative balance mode
+Specifies whether POs with a negative SV balance should be accepted.
+| NegativeBalance|                      
+|---------------------------------|
+|**`FORBIDDEN`**|
+|**`AUTHORIZED`**|
+
 ## Basic Operations
 
 ### PoSelection
 
-Service extending Keyple Core Abstract Card Selection to manage specific features of Calypso POs during the selection:
-* Send APDU Commands to the POs right after the card selection.
-* Produce a Calypso PO from the CardSelectionResponse. The object is filled with the PO identification data from the FCI and the
+This service provides the means to define a selection case targeting a particular PO (in the ISO 7816-4 sense) with the possibility to collect additional information about the PO before a transaction. 
+
+It integrates with the **Keyple Core Card Selection** service to manage the specific features of Calypso POs:
+* Sends optional *read* and/or *select* commands to the POs right after the initial card selection.
+* Produces a CalypsoPO object from the CardSelectionResponse. The object is filled with the PO identification data from the FCI and the
 possible responses to additional APDU commands executed after the selection.
 
 ```java
@@ -189,8 +206,11 @@ possible responses to additional APDU commands executed after the selection.
 ```
 
 ## SamSelection
-Service extending Keyple Core Abstract Card Selection specialized to manage the specific characteristics of Calypso SAMs. 
-The service provides an instance of Calypso SAM and may execute the unlock command during the selection process.
+This service provides the means to define a selection case targeting a Calypso SAM.
+
+It integrates with the **Keyple Core Card Selection** service to manage the specific features of Calypso SAMs:
+* optionally executes an unlock command during the selection process.
+* provides an instance of Calypso SAM. 
 
 ```java
     ...
@@ -212,12 +232,16 @@ The service provides an instance of Calypso SAM and may execute the unlock comma
 ```
 
 ### PoTransaction
-Service providing high-level API to manage transactions with a Calypso PO. The tied Calypso PO Object is kept and updated at
+Service providing high-level API to manage transactions with a Calypso PO. The tied CalypsoPO Object is kept and updated at
 each step of using this service. 
 
 This service workflow is composed of two steps:
-* Prepare the commands to be executed to the PO
-* Process the prepared commands. Regarding of commands, the presence of SAM could be mandatory.
+* Prepares the commands to be sent to the PO; several command preparations can be stacked (no communication neither with the PO nor with the SAM). 
+* Process the prepared commands. Performs all necessary communications with the PO and/or the SAM to carry out the previously prepared operations. CalypsoPo is updated accordingly. 
+
+Note:  
+* Regarding of commands, the presence of SAM is mandatory or not (mandatory when a *Calypso Secure Session* is open).
+* Pay attention to the number of commands affecting the session modifications buffer, see the *ModificationMode* setting.
 
 ```java
     ...
@@ -274,9 +298,37 @@ Keyple provides an enums to easily configure the Secure Session AccessLevel:
 |**`SESSION_LVL_LOAD`**|Session Access Level used for reloading purposes.
 |**`SESSION_LVL_DEBIT`**|Session Access Level used for validating and debiting purposes. 
 
+#### Transaction flow and Calypso Secure Session management
 
-  
-  
+PoTransaction allows you to process a Calypso Secure session in different ways. These are difficult to describe
+all in detail but here is an example from which other variants can be obtained.
+
+A typical Calypso PO transaction flow, for example for ticket validation, could be :
+* Execute the selection of a Calypso PO and retrieves the contents of the environment file at the same time.
+* Open a secure session and get the contract list
+* Get the contract and associated counter
+* Decrease the counter, append a new event log
+* Close the secure session
+
+Translated into Keyple Calypso operations, the entire transaction would include the following steps (simplified syntax):
+
+* ```poSelection = new PoSelection(CARD_IAD)```
+* ```poSelection.prepareReadRecordFile(ENVIRONMENT_SFI)```
+* process the poSelection (either explicitly or by default, see the [standalone application]({{< relref "standalone-application.md" >}})) guide
+* retrieve CalypsoPo, check its content (environment data)
+* ```poTransaction = new PoTransaction(calypsoPo)```
+* ```poTransaction.prepareReadRecordFile(CONTRACT_LIST_SFI)```
+* ```poTransaction.processOpening(DEBIT)```
+* check CalypsoPo content (contract list), decide which contract/counter to read
+* ```poTransaction.prepareReadRecordFile(CONTRACT_n)```
+* ```poTransaction.prepareReadRecordFile(COUNTER_n)```
+* ```poTransaction.processPoCommands()```
+* check CalypsoPo content (contract/counter), decide action (decrease counter, append event log)
+* ```poTransaction.prepareDecrease(COUNTER_n, X)```
+* ```poTransaction.prepareAppendRecord(EVENT, event_data```
+* ```poTransaction.prepareReleaseChannel()```
+* ```poTransaction.processClosing()```
+
 ## Examples
 Detailed use case examples can be seen here:
 
