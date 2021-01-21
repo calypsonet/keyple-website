@@ -1,14 +1,24 @@
 ---
-title: Migration Guide - Keyple Java 0.8.1 to 0.9.0
-linktitle: Keyple Java 0.8.1 to 0.9.0
+title: Upgrade from an earlier version
+linktitle: Upgrade Keyple
 type: book
 toc: true
 draft: false
 weight: 350
+-----------
+
+This guide is intended to help a user of a previous version of Keyple Java to upgrade his application to a new version of the library.
+
+Upgrade from:
+* [0.8.1 to 0.9.0](#upgrade-from-081-to-090)
+* [0.9.0 to 1.0.0](#upgrade-from-090-to-100)
+
 ---
 
-This guide is intended to help a user of version 0.8.1 of Keyple Java to upgrade his application to the 0.9.0 version of the library.
+## Upgrade from 0.8.1 to 0.9.0
 
+### What's changed?
+From a user API point of view, the changes relate to the following topics:
 From a user API point of view, the changes relate to the following topics:
 
 * [plugin registration in the SeProxyService](#plugin-registration-in-the-seproxyservice)
@@ -21,7 +31,7 @@ From a user API point of view, the changes relate to the following topics:
 * [retrieving data read from POs](#retrieving-data-read-from-pos)
 * [error handling](#error-handling)
 
-## Plugin registration in the SeProxyService
+### Plugin registration in the SeProxyService
 
 The `registerPlugin` method of the `SeProxyService` class now returns the reference of the registered plugin.
 
@@ -35,7 +45,7 @@ This makes it possible, for example, to perform a reader setup in an application
    SeReader poReader = pcscPlugin.getReader("ASK LoGO 0");
 ```
 
-## Preparation of selection cases
+### Preparation of selection cases
 
 The `AidSelector`, `Selector` and `PoSelector` classes now follow the Fluent Builder pattern for better handling of optional parameters.
 
@@ -86,7 +96,7 @@ public void prepareSelectFile(short lid)
 
 Note that from now the "prepare" methods no longer return indexes, the data will be placed in the CalypsoPo object.
 
-## Retrieving selection results
+### Retrieving selection results
 
 The `MatchingSelection` class no longer exists.
 In the class `SelectionsResult` (see `processDefaultSelection/processExplicitSelection`):
@@ -101,7 +111,7 @@ In the class `SelectionsResult` (see `processDefaultSelection/processExplicitSel
 
 * a new `getActiveSelectionIndex` method returns the index of the active selection (the still existing `hasActiveSelection` method must be used before)
 
-## Definition of the security settings of the transaction
+### Definition of the security settings of the transaction
 
 
 
@@ -124,7 +134,7 @@ poSecuritySettings = new PoSecuritySettings.PoSecuritySettingsBuilder(samResourc
                             .build();
 ```
 
-## Creation of the PoTransaction object
+### Creation of the PoTransaction object
 
 Since PoSecuritySettings now integrates SamResource, the construction of PoTransaction has evolved slightly.
 
@@ -134,7 +144,7 @@ Here is an example:
 PoTransaction poTransaction = new PoTransaction(new PoResource(poReader, calypsoPo), poSecuritySettings);
 ```
 
-## Transaction commands preparation
+### Transaction commands preparation
 
 Just as with the "prepare" commands used for selection, the "prepare" commands used for transactions no longer return indexes.
 
@@ -154,7 +164,7 @@ public final void prepareIncreaseCounter(byte sfi, int counterNumber, int incVal
 public final void prepareDecreaseCounter(byte sfi, int counterNumber, int decValue)
 ```
 
-## Transaction commands processing
+### Transaction commands processing
 
 The "process" commands have also been revised and simplified.
 
@@ -178,7 +188,7 @@ public final void processCancel(ChannelControl channelControl)
 public final void processClosing(ChannelControl channelControl)
 ```
 
-## Retrieving data read from POs
+### Retrieving data read from POs
 
 This is a major evolution of the Keyple API. Previously, data read from Calyspo POs were retrieved by applications using "parser" methods.
 
@@ -306,3 +316,20 @@ Catching exceptions is therefore now optional.
 However, it is possible to selectively catch certain exceptions in order to deal with particular cases.
 
 The new hierarchy of Keyple exceptions is shown [here](https://keyple.atlassian.net/projects/KEYP/issues/KEYP-154?filter=allissues&orderby=priority%20DESC&keyword=exceptions)
+
+---
+## Upgrade from 0.9.0 to 1.0.0
+
+### What's changed?
+
+#### Class renaming
+Many classes and enum items have had their names changed to facilitate the learning of Keyple concepts.
+
+| Old name (0.9.0) | New name (1.0.0)
+|---------|----------
+| SeProxyService | SmartCardService
+| ReaderPlugin | Plugin
+| SeReader | Reader
+| ReaderPoolPlugin | PoolPlugin
+| SeSelection | CardSelectionService
+
