@@ -1,5 +1,5 @@
 ---
-title: Upgrade from an earlier version
+title: Upgrade from an earlier version of Keyple
 linktitle: Upgrade Keyple
 type: book
 toc: true
@@ -10,9 +10,67 @@ weight: 350
 This guide is intended to help a user of a previous version of Keyple Java to upgrade his application to a new version of the library.
 
 Upgrade from:
-* [0.8.1 to 0.9.0](#upgrade-from-081-to-090)
 * [0.9.0 to 1.0.0](#upgrade-from-090-to-100)
+* [0.8.1 to 0.9.0](#upgrade-from-081-to-090)
 
+Note: here we describe the evolutions in broad outline, for the details of the APIs, the reader is invited to consult 
+the [API reference]({{< ref "../api-reference/_index.md" >}}) section.
+
+---
+
+## Upgrade from 0.9.0 to 1.0.0
+
+### What's changed?
+Compared to version 0.9, the goal of Keyple 1.0 is mainly to fix bugs, 
+add features to make Keyple more robust and rename/reorganize classes to make it easier to learn.
+
+* [Renamings](#class-renaming)
+* [Internal exception handling](#internal-exception-handling)
+* [PC/SC plugin](#pcsc-plugin)
+
+#### Class renaming
+
+| Module  | Old name (0.9.0) | New name (1.0.0)
+|---------|---------|----------
+| Keyple Core | SeProxyService | SmartCardService
+| Keyple Core | ReaderPlugin | Plugin
+| Keyple Core | SeReader | Reader
+| Keyple Core | ReaderPoolPlugin | PoolPlugin
+| Keyple Core | SeSelection | CardSelectionService
+| Keyple Core | SeSelector | CardSelector
+| Keyple Core | AbstractMatchingSe | AbstractSmartCard
+| Keyple Calypso | PoSelectionRequest | PoSelection
+| Keyple Calypso | SamSelectionRequest | SamSelection
+
+#### Internal exception handling
+
+New possibilities have been added in the management of observable objects (*Plugin* and *Reader*).
+
+If the Plugin or Reader is observable, it is now necessary to define exception handlers that will be called by the internal layers of Keyple in the case of an exception raised by an observation process.
+
+Two new interfaces have been added to the *event* package to allow applications via the factories of the concerned plugins to define the method that will be called when needed:
+* ```PluginObservationExceptionHandler```
+* ```ReaderObservationExceptionHandler```
+
+These handlers are usually provided by the application via the constructor of the plugin's factory.
+
+#### PC/SC plugin
+The generic parameterization interface for plugins and readers has been removed in favor of methods specific to each plugin.
+
+In the case of the PC/SC plugin, the following methods have appeared:
+
+
+| |
+|---------|---------
+| PcscPlugin | ```setReaderNameFilter```
+| PcscPlugin | ```setProtocolIdentificationRule```
+| PcscReader | ```setSharingMode```
+| PcscReader | ```setContactless```
+| PcscReader | ```setIsoProtocol```
+| PcscReader | ```setDisconnectionMode```
+
+
+  
 ---
 
 ## Upgrade from 0.8.1 to 0.9.0
@@ -316,20 +374,4 @@ Catching exceptions is therefore now optional.
 However, it is possible to selectively catch certain exceptions in order to deal with particular cases.
 
 The new hierarchy of Keyple exceptions is shown [here](https://keyple.atlassian.net/projects/KEYP/issues/KEYP-154?filter=allissues&orderby=priority%20DESC&keyword=exceptions)
-
----
-## Upgrade from 0.9.0 to 1.0.0
-
-### What's changed?
-
-#### Class renaming
-Many classes and enum items have had their names changed to facilitate the learning of Keyple concepts.
-
-| Old name (0.9.0) | New name (1.0.0)
-|---------|----------
-| SeProxyService | SmartCardService
-| ReaderPlugin | Plugin
-| SeReader | Reader
-| ReaderPoolPlugin | PoolPlugin
-| SeSelection | CardSelectionService
 
