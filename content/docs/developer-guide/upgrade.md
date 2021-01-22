@@ -27,6 +27,7 @@ add features to make Keyple more robust and rename/reorganize classes to make it
 * [Renamings](#class-renaming)
 * [Internal exception handling](#internal-exception-handling)
 * [PC/SC plugin](#pcsc-plugin)
+* [Keyple Distributed](#keyple-distributed)
 
 #### Class renaming
 
@@ -69,7 +70,9 @@ In the case of the PC/SC plugin, the following methods have appeared:
 | PcscReader | ```setIsoProtocol```
 | PcscReader | ```setDisconnectionMode```
 
-
+#### Keyple Distributed
+The use of Keyple in a remote context has been extensively reviewed and its description is beyond the scope of this guide. Please refer to the [distributed application]({{< relref
+"distributed-application.md" >}}) section.
   
 ---
 
