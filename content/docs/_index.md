@@ -5,7 +5,14 @@ type: book
 toc: false
 weight: 100
 ---
+## About this documentation
 
+This documentation is constantly evolving according to the feedback from its readers. Do not hesitate to [open a ticket](https://github.com/eclipse/keyple-website/issues) or to join our [mailing list](https://accounts.eclipse.org/mailing-list/keyple-dev) with questions and/or any topic you think deserves clarification or seems confusing. 
+
+
+
+## Global Architecture
+‡
 {{< figure library="true" src="docs-overview//Keyple-components.svg" title="Global Architecture of Eclipse Keyple™" >}}
 
 Eclipse Keyple™ is currently divided in two major layers:
